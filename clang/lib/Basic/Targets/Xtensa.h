@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/XtensaTargetParser.h"
 
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/MacroBuilder.h"
@@ -31,6 +32,8 @@ namespace targets {
 class LLVM_LIBRARY_VISIBILITY XtensaTargetInfo : public TargetInfo {
   static const Builtin::Info BuiltinInfo[];
   std::string CPU;
+  bool HasFP = false;
+  bool HasWindowed = false;
 
 public:
   XtensaTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
@@ -69,11 +72,11 @@ public:
         "a11", "a12", "a13", "a14", "a15",
         // Special register name
         "sar"};
-    return llvm::makeArrayRef(GCCRegNames);
+    return llvm::ArrayRef(GCCRegNames);
   }
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return None;
+    return std::nullopt;
   }
 
   bool validateAsmConstraint(const char *&Name,
@@ -94,19 +97,25 @@ public:
   }
 
   bool isValidCPUName(StringRef Name) const override {
-    return llvm::StringSwitch<bool>(Name)
-        .Case("esp32", true)
-        .Case("esp8266", true)
-        .Case("esp32-s2", true)
-        .Case("esp32-s3", true)
-        .Case("generic", true)
-        .Default(false);
+    return llvm::Xtensa::parseCPUKind(Name) != llvm::Xtensa::CK_INVALID;
   }
 
   bool setCPU(const std::string &Name) override {
     CPU = Name;
     return isValidCPUName(Name);
   }
+
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
+
+  bool
+  initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
+                 StringRef CPU,
+                 const std::vector<std::string> &FeaturesVec) const override;
+
+  bool hasFeature(StringRef Feature) const override;
+
+  bool handleTargetFeatures(std::vector<std::string> &Features,
+                            DiagnosticsEngine &Diags) override;
 };
 } // namespace targets
 } // namespace clang

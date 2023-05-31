@@ -51,6 +51,16 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF() {
   return std::make_unique<XtensaElfTargetObjectFile>();
 }
 
+static StringRef getCPUName(StringRef CPU) {
+  if (CPU.empty())
+    CPU = "esp32";
+  else if (CPU == "esp32-s2")
+    CPU = "esp32s2";
+  else if (CPU == "esp32-s3")
+    CPU = "esp32s3";
+  return CPU;
+}
+
 XtensaTargetMachine::XtensaTargetMachine(const Target &T, const Triple &TT,
                                          StringRef CPU, StringRef FS,
                                          const TargetOptions &Options,
@@ -72,7 +82,7 @@ XtensaTargetMachine::XtensaTargetMachine(const Target &T, const Triple &TT,
                                          std::optional<Reloc::Model> RM,
                                          std::optional<CodeModel::Model> CM,
                                          CodeGenOpt::Level OL, bool JIT)
-    : XtensaTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, true) {}
+    : XtensaTargetMachine(T, TT, getCPUName(CPU), FS, Options, RM, CM, OL, JIT, true) {}
 
 const XtensaSubtarget *
 XtensaTargetMachine::getSubtargetImpl(const Function &F) const {
