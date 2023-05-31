@@ -12262,9 +12262,8 @@ ABIArgInfo XtensaABIInfo::classifyArgumentType(QualType Ty,
     if (Size < 32 && Ty->isIntegralOrEnumerationType() && !MustUseStack) {
       return extendType(Ty);
     }
-    if (Size == 64)
-      return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), 64));
-    return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), 32));
+    // Assume that type has 32, 64 or 128 bits
+    return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), Size));
   }
 
   // Aggregates which are <= 6*32 will be passed in registers if possible,
@@ -12275,6 +12274,8 @@ ABIArgInfo XtensaABIInfo::classifyArgumentType(QualType Ty,
     } else if (NeededAlign == (2 * 32)) {
       return ABIArgInfo::getDirect(llvm::ArrayType::get(
           llvm::IntegerType::get(getVMContext(), 64), NeededArgGPRs / 2));
+    } else if (NeededAlign == (4 * 32)) {
+      return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), 128));
     } else {
       return ABIArgInfo::getDirect(llvm::ArrayType::get(
           llvm::IntegerType::get(getVMContext(), 32), NeededArgGPRs));
