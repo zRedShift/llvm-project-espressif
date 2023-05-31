@@ -309,9 +309,4 @@ void xtensa::getXtensaTargetFeatures(const Driver &D, const ArgList &Args,
                                      std::vector<StringRef> &Features) {
   if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
     getXtensaFeaturesFromMcpu(D, Args, A, A->getValue(), Features);
-
-  // Now add any that the user explicitly requested on the command line,
-  // which may override the defaults.
-  handleTargetFeaturesGroup(Args, Features,
-                            options::OPT_m_xtensa_Features_Group);
 }
