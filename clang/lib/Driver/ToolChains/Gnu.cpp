@@ -1694,6 +1694,7 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
   // TODO: support MULTILIB_REUSE
   constexpr RiscvMultilib RISCVMultilibSet[] = {
       {"rv32i", "ilp32"},     {"rv32im", "ilp32"},     {"rv32iac", "ilp32"},
+      {"rv32imc", "ilp32"},
       {"rv32imac", "ilp32"},  {"rv32imafc", "ilp32f"}, {"rv64imac", "lp64"},
       {"rv64imafdc", "lp64d"}};
 
@@ -1712,14 +1713,23 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
   MultilibSet RISCVMultilibs =
       MultilibSet()
           .Either(ArrayRef<Multilib>(Ms))
-          .FilterOut(NonExistent)
+          .FilterOut(NonExistent);
+  if (TargetTriple.getVendor() == llvm::Triple::Espressif) {
+    RISCVMultilibs
+          .setFilePathsCallback([](const Multilib &M) {
+            return std::vector<std::string>(
+                {M.gccSuffix(),
+                 "/../../../../riscv32-esp-elf/lib" + M.gccSuffix()});
+          });
+  } else {
+    RISCVMultilibs
           .setFilePathsCallback([](const Multilib &M) {
             return std::vector<std::string>(
                 {M.gccSuffix(),
                  "/../../../../riscv64-unknown-elf/lib" + M.gccSuffix(),
                  "/../../../../riscv32-unknown-elf/lib" + M.gccSuffix()});
           });
-
+  }
 
   Multilib::flags_list Flags;
   llvm::StringSet<> Added_ABIs;
