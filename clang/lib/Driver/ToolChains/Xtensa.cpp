@@ -35,21 +35,15 @@ XtensaToolChain::XtensaToolChain(const Driver &D, const llvm::Triple &Triple,
     : Generic_ELF(D, Triple, Args) {
 
   std::vector<std::string> ExtraAliases;
-  SmallString<128> CpuName;
+  StringRef CpuName;
 
   if (Triple.getVendor() == llvm::Triple::Espressif ||
       Triple.getVendor() == llvm::Triple::UnknownVendor) {
-    Arg *mcpuArg = Args.getLastArg(options::OPT_mcpu_EQ);
-    if (mcpuArg)
-      CpuName = mcpuArg->getValue();
-    else if (Triple.getVendor() == llvm::Triple::Espressif)
-      // 'esp32' is default for 'xtensa-esp-xxx' targets,
-      // for generic 'xtensa' target CPU should be always specified explicitly with '-mcpu'
-      CpuName = "esp32";
+    CpuName = GetTargetCPUVersion(Args, Triple);
     if (CpuName.startswith("esp")) {
       // ESP Xtensa GCC toolchain uses shorten triple "xtensa-<cpu>-elf", so add it as an alias
       // to help Clang detect GCC installation properly
-      ExtraAliases = {std::string("xtensa-") + CpuName.c_str() + "-elf"};
+      ExtraAliases = {std::string("xtensa-") + CpuName.str() + "-elf"};
       if (Args.hasArg(options::OPT_v)) {
         llvm::errs() << "Use GCC target extra alias: " << ExtraAliases[0] << "\n";
       }
@@ -228,12 +222,17 @@ XtensaToolChain::GetUnwindLibType(const llvm::opt::ArgList &Args) const {
   return ToolChain::UNW_None;
 }
 
-const StringRef XtensaToolChain::GetTargetCPUVersion(const ArgList &Args) {
+const StringRef XtensaToolChain::GetTargetCPUVersion(const ArgList &Args, const llvm::Triple &Triple) {
+  StringRef CPUName;
   if (Arg *A = Args.getLastArg(clang::driver::options::OPT_mcpu_EQ)) {
-    StringRef CPUName = A->getValue();
-    return CPUName;
+    CPUName = A->getValue();
+  } else if (Triple.getVendor() == llvm::Triple::Espressif) {
+      // 'esp32' is default for 'xtensa-esp-xxx' targets,
+      // for generic 'xtensa' target CPU should be always specified explicitly with '-mcpu'
+      CPUName = "esp32";
+
   }
-  return "esp32";
+  return CPUName;
 }
 
 void tools::xtensa::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
@@ -295,11 +294,17 @@ void xtensa::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   bool LinkerIsLLD;
   std::string LinkerPath = ToolChain.GetLinkerPath(&LinkerIsLLD);
-  if (ToolChain.GCCToolchainName != "") {
-    if (!LinkerIsLLD) {
+  if (!LinkerIsLLD) {
+    if (ToolChain.GCCToolchainName != "") {
       Linker.assign(ToolChain.GCCToolchainDir);
       llvm::sys::path::append(
           Linker, "bin", ToolChain.GCCToolchainName + "-" + getShortName());
+    } else if (ToolChain.getTriple().getVendor() == llvm::Triple::Espressif) {
+      // ESP workaround, if there is no GCC installation we need to use xtensa-espXX-elf prefix for ld.
+      // so guess it basing on selected mcpu
+      Linker.assign(ToolChain.getDriver().Dir);
+      llvm::sys::path::append(
+          Linker, "xtensa-" + ToolChain.GetTargetCPUVersion(Args, ToolChain.getTriple()) + "-elf-" + getShortName());
     } else {
       Linker.assign(LinkerPath);
     }
