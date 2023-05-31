@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
@@ -43,6 +44,16 @@ getModifierVariantKind(XtensaCP::XtensaCPModifier Modifier) {
 void XtensaAsmPrinter::emitInstruction(const MachineInstr *MI) {
   XtensaMCInstLower Lower(MF->getContext(), *this);
   MCInst LoweredMI;
+  unsigned Opc = MI->getOpcode();
+
+  switch (Opc) {
+  case Xtensa::BR_JT: {
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(Xtensa::JX).addReg(MI->getOperand(0).getReg()));
+    return;
+  }
+  }
   Lower.lower(MI, LoweredMI);
   EmitToStreamer(*OutStreamer, LoweredMI);
 }
