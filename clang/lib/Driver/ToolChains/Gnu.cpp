@@ -1822,18 +1822,17 @@ static void findXtensaMultilibs(const Driver &D,
   bool IsESP32 = cpu.equals("esp32");
 
   XtensaMultilibs.push_back(Multilib());
-  if (IsESP32)
-    XtensaMultilibs.push_back(Multilib("esp32-psram", {}, {}, 2)
-                            .flag("+mfix-esp32-psram-cache-issue"));
-
   XtensaMultilibs.push_back(
       Multilib("no-rtti", {}, {}, 1).flag("+fno-rtti").flag("-frtti"));
 
-  if (IsESP32)
-    XtensaMultilibs.push_back(Multilib("esp32-psram/no-rtti", {}, {}, 3)
-                            .flag("+fno-rtti")
-                            .flag("-frtti")
+  if (IsESP32) {
+    XtensaMultilibs.push_back(Multilib("esp32-psram", {}, {}, 2)
                             .flag("+mfix-esp32-psram-cache-issue"));
+    XtensaMultilibs.push_back(Multilib("esp32-psram/no-rtti", {}, {}, 3)
+                            .flag("+mfix-esp32-psram-cache-issue")
+                            .flag("+fno-rtti")
+                            .flag("-frtti"));
+  }
 
   std::string cpu_name = cpu.str();
   XtensaMultilibs
@@ -1845,7 +1844,7 @@ static void findXtensaMultilibs(const Driver &D,
 
   Multilib::flags_list Flags;
   addMultilibFlag(
-      Args.hasFlag(options::OPT_frtti, options::OPT_fno_rtti, false), "frtti",
+      Args.hasFlag(options::OPT_frtti, options::OPT_fno_rtti, true), "frtti",
       Flags);
 
   if (IsESP32)
