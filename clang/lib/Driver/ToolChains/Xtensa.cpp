@@ -38,14 +38,23 @@ XtensaToolChain::XtensaToolChain(const Driver &D, const llvm::Triple &Triple,
 
   std::vector<std::string> ExtraAliases;
 
-  if (Triple.getVendor() == llvm::Triple::Espressif) {
-    std::string ESPCpuName = "esp32";
-    if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
-      ESPCpuName = A->getValue();
-    }
-    ExtraAliases = {std::string("xtensa-") + ESPCpuName + "-elf"};
-    if (Args.hasArg(options::OPT_v)) {
-      llvm::errs() << "Use GCC target extra alias: " << ExtraAliases[0] << "\n";
+  if (Triple.getVendor() == llvm::Triple::Espressif ||
+      Triple.getVendor() == llvm::Triple::UnknownVendor) {
+    Arg *mcpuArg = Args.getLastArg(options::OPT_mcpu_EQ);
+    SmallString<128> CpuName;
+    if (mcpuArg)
+      CpuName = mcpuArg->getValue();
+    else if (Triple.getVendor() == llvm::Triple::Espressif)
+      // 'esp32' is default for 'xtensa-esp-xxx' targets,
+      // for generic 'xtensa' target CPU should be always specified explicitly with '-mcpu'
+      CpuName = "esp32";
+    if (CpuName.startswith("esp")) {
+      // ESP Xtensa GCC toolchain uses shorten triple "xtensa-<cpu>-elf", so add it as an alias
+      // to help Clang detect GCC installation properly
+      ExtraAliases = {std::string("xtensa-") + CpuName.c_str() + "-elf"};
+      if (Args.hasArg(options::OPT_v)) {
+        llvm::errs() << "Use GCC target extra alias: " << ExtraAliases[0] << "\n";
+      }
     }
   }
 
