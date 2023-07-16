@@ -204,6 +204,8 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &tm,
   else
     setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i32, Expand);
 
+  setOperationAction({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX},
+                     MVT::i32, Subtarget.hasMINMAX() ? Legal : Expand);
 
   setOperationAction(ISD::SMUL_LOHI, MVT::i32, Expand);
   setOperationAction(ISD::SMUL_LOHI, MVT::i64, Expand);
