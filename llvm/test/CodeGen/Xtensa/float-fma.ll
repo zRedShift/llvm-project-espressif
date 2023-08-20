@@ -134,14 +134,13 @@ define float @fnmsub_s_swap_intrinsics(float %a, float %b, float %c) nounwind {
 ; XTENSA-LABEL: fnmsub_s_swap_intrinsics:
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    entry a1, 32
-; XTENSA-NEXT:    wfr f8, a3
-; XTENSA-NEXT:    wfr f9, a2
+; XTENSA-NEXT:    wfr f8, a2
+; XTENSA-NEXT:    wfr f9, a3
 ; XTENSA-NEXT:    wfr f10, a4
-; XTENSA-NEXT:    neg.s f10, f10
-; XTENSA-NEXT:    madd.s f10, f9, f8
+; XTENSA-NEXT:    msub.s f10, f9, f8
 ; XTENSA-NEXT:    rfr a2, f10
 ; XTENSA-NEXT:    retw.n
-  %negc = fneg float %c
-  %fma = call float @llvm.fma.f32(float %a, float %b, float %negc)
+  %negb = fneg float %b
+  %fma = call float @llvm.fma.f32(float %a, float %negb, float %c)
   ret float %fma
 }
